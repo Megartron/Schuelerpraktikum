@@ -4,11 +4,12 @@ import numpy as np
 import random
 
 class Adaline:
-    def __init__(self, datensatz: list, weights: list):
+    def __init__(self, datensatz: list, weights: list, animiert: bool):
         self.datensatz = datensatz
         self.trainingsdatensatz = []
         self.ws = weights
         self.b1 = 1
+        self.animiert = animiert
     
     def trainningsdaten_erstellen(self, anzahl: int, rand: bool, trainigsdatensatz: list):
         if rand:
@@ -21,14 +22,22 @@ class Adaline:
             print("Benutzer Datensatz: ", self.trainingsdatensatz)
         else:
             self.trainingsdatensatz = trainigsdatensatz
+        
+        if len(self.trainingsdatensatz[0]) - 1 != len(self.ws):
+            raise Exception("Anzahl der Gewichte stimmen nicht mit dem Trainingsdatensatz überein!")
 
         return self.trainingsdatensatz
     
-    def perzeptron(self, stop: float, max_iterationen: int):
+    def perzeptron(self, stop: float, max_iterationen: int, e: int = 1.00042):
         a = 0.015
         l = len(self.trainingsdatensatz)
         
+        # Zum Zeigen des Lernprozesses
+        iteration = e - 1
+        
         for j in range(max_iterationen):
+            if self.animiert:
+                plt.clf()
             fehler_w = [0, 0, 0, 0, 0, 0]
             gesamt_fehler = 0
             fehler_b1 = 0
@@ -63,7 +72,16 @@ class Adaline:
 
             if gesamt_fehler/l < stop:
                 break
-        print(gesamt_fehler/l)
+
+            if j >= max_iterationen*iteration and self.animiert:
+                e *= e
+                iteration += e - 1
+                self.entscheidungsgrenze_plotten(new = False)
+        if self.animiert:
+            plt.clf()
+            self.entscheidungsgrenze_plotten(new = False)
+            self.animiert = False
+            
         return (self.ws, self.b1)
     
     # Prüfen wie gut das Perzeptron schätzen kann
@@ -87,9 +105,9 @@ class Adaline:
                 falsch += 1
         return (richtig, falsch)
     
-    def entscheidungsgrenze_plotten(self, welcher: str):
+    def entscheidungsgrenze_plotten(self, welcher: str = "training", new: bool = True):
         if len(self.ws) != 2:
-            print("Entscheidungsgrenze kann nur in 2D geplotted werden!")
+            print("Entscheidungsgrenze kann nur in bei zwei Gewichten geplotted werden!")
             return
 
         w1 = self.ws[0]
@@ -98,27 +116,35 @@ class Adaline:
         if welcher == "training":
             x1 = self.get_spalte_training(0)
             x2 = self.get_spalte_training(1)
-            y = self.get_spalte_training(2)
+            y = self.get_spalte_training(-1)
         else:
             x1 = self.get_spalte_echt(0)
             x2 = self.get_spalte_echt(1)
-            y = self.get_spalte_echt(2)
+            y = self.get_spalte_echt(-1)
         
-        plt.figure(figsize=(8, 6))
-
-        x_line = np.linspace(3.5, 7, 100)
+        
+        
+        x_line = np.linspace(0, 100, 2)
         y_line = - (w1 / w2) * x_line - (self.b1 / w2) # 2D Entscheidungsgrenze: 0 = w1x1 + w2x2 +b, x_line = x1, y_line = x2
-        plt.plot(x_line, y_line, label="Entscheidungsgrenze")
-
         farbe = ["green" if y_wert == 1 else "red" for y_wert in y]
+
+        if new:
+            plt.figure()
+
+        plt.plot(x_line, y_line, label="Entscheidungsgrenze")
         plt.scatter(x1, x2, c=farbe)
+        plt.gca().set_xlim(min(self.get_spalte_echt(0)) - 0.2, max(self.get_spalte_echt(0)) + 0.2)
+        plt.gca().set_ylim(min(self.get_spalte_echt(1)) - 0.2, max(self.get_spalte_echt(1)) + 0.2)
 
         plt.xlabel("Sepal Length")
         plt.ylabel("Sepal Width")
         plt.title("ADALINE")
         plt.legend()
 
-        plt.show()
+        if not self.animiert:
+            plt.show()
+        else:
+            plt.pause(0.5)
 
 
     # Daten für das Plotten
@@ -167,17 +193,17 @@ for i in range(10):
 trainingsdatensatz.append([4.5, 2.3, 1])
 trainingsdatensatz.append([5.4, 3.0, -1])
 
-a = Adaline(datensatz, [1, 1, 1, 1])
+a = Adaline(datensatz, [1, 1], True)
 trainingsdatensatz_1 = [[6.3, 2.3, -1], [5.7, 2.6, -1], [5.4, 3.4, 1], [4.3, 3.0, 1], [6.4, 3.2, -1], [5.0, 3.4, 1], [5.7, 3.0, -1], [6.0, 2.7, -1], [5.5, 2.4, -1], [6.3, 2.5, -1]] # 2 weights
 trainingsdatensatz_2 = [[6.7, 3.1, 4.4, -1], [5.6, 3.0, 4.1, -1], [5.8, 2.6, 4.0, -1], [5.0, 3.6, 1.4, 1], [5.7, 2.6, 3.5, -1], [6.2, 2.2, 4.5, -1], [6.5, 2.8, 4.6, -1], [4.9, 3.1, 1.5, 1], [5.6, 2.5, 3.9, -1], [6.0, 2.7, 5.1, -1]] # 3 weights
 trainingsdatensatz_3 = [[5.5, 4.2, 1.4, 0.2, 1], [5.7, 2.9, 4.2, 1.3, -1], [5.4, 3.9, 1.7, 0.4, 1], [6.2, 2.2, 4.5, 1.5, -1], [6.0, 2.9, 4.5, 1.5, -1], [6.2, 2.9, 4.3, 1.3, -1], [4.6, 3.4, 1.4, 0.3, 1], [4.3, 3.0, 1.1, 0.1, 1], [6.7, 3.1, 4.7, 1.5, -1], [5.6, 2.9, 3.6, 1.3, -1]] # 4 weights
-a.trainningsdaten_erstellen(10, False, trainingsdatensatz_3)
+a.trainningsdaten_erstellen(10, False, trainingsdatensatz_1)
 richtig, falsch = a.prüfung()
 print(f"(Nicht trainiert) Richtig: {richtig}; Falsch: {falsch}")
 
-werte = a.perzeptron(0.001, 10_000)
+werte = a.perzeptron(0.001, 10_000, 1.0001)
 
 richtig, falsch = a.prüfung()
-print(f"(Trainiert) Richtig: {richtig}; Falsch: {falsch}")
+print(f"(Trainiert) Richtig: {richtig}; Falsch: {falsch}, mit folgenden Gewichten: {werte}")
 
-a.entscheidungsgrenze_plotten("echt")
+a.entscheidungsgrenze_plotten(welcher = "echt", new = True)
